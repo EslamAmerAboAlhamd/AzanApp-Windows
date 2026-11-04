@@ -1,0 +1,51 @@
+#define MyAppName "المؤذن"
+#define MyAppEnglishName "AzanApp"
+#define MyAppVersion "1.0.0"
+#define MyAppPublisher "Eslam Amer"
+#define MyAppExeName "AzanApp.exe"
+
+[Setup]
+AppId={{B7E2C1A4-5D3F-4A9B-8C6E-1F2D3A4B5C6D}
+AppName={#MyAppName}
+AppVersion={#MyAppVersion}
+AppPublisher={#MyAppPublisher}
+DefaultDirName={autopf}\{#MyAppEnglishName}
+DefaultGroupName={#MyAppName}
+DisableProgramGroupPage=yes
+OutputDir=installer
+OutputBaseFilename=AzanApp_Setup_{#MyAppVersion}
+SetupIconFile=app.ico
+UninstallDisplayIcon={app}\{#MyAppExeName}
+Compression=lzma2
+SolidCompression=yes
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
+MinVersion=10.0.17763
+PrivilegesRequired=admin
+WizardStyle=modern
+CloseApplications=yes
+
+[Languages]
+Name: "arabic"; MessagesFile: "compiler:Languages\Arabic.isl"
+Name: "english"; MessagesFile: "compiler:Default.isl"
+
+[Tasks]
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+
+[Files]
+Source: "publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+[Icons]
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
+Name: "{group}\إلغاء تثبيت {#MyAppName}"; Filename: "{uninstallexe}"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+
+[Run]
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+
+[UninstallRun]
+Filename: "taskkill"; Parameters: "/F /IM {#MyAppExeName}"; Flags: runhidden; RunOnceId: "KillAzan"
+
+[Registry]
+; حذف إدخال التشغيل التلقائي عند إلغاء التثبيت
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: "AzanApp"; Flags: uninsdeletevalue dontcreatekey

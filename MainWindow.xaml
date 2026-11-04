@@ -1,0 +1,62 @@
+﻿<Window x:Class="AzanApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="المؤذن" Height="600" Width="1024"
+        Icon="app.ico"
+        FontFamily="pack://application:,,,/Fonts/#Cairo"
+        WindowStartupLocation="CenterScreen">
+
+    <Grid x:Name="MainGrid">
+        <!-- صورة الخلفية (الوضع القديم: تملا النافذة) -->
+        <Image x:Name="ImgBackground" Stretch="UniformToFill"/>
+
+        <!-- طبقة تعتيم خفيفة -->
+        <Rectangle Fill="#20000000"/>
+
+        <!-- المحتوى الرئيسي -->
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+            <TextBlock Text="الصلاة القادمة" Foreground="#E0E0E0" FontSize="26" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+
+            <TextBlock x:Name="TxtPrayerName" Text="الظهر" Foreground="#FFFFFF" FontSize="72" FontWeight="Bold" HorizontalAlignment="Center">
+                <TextBlock.Effect>
+                    <DropShadowEffect BlurRadius="10" Color="Black" ShadowDepth="3"/>
+                </TextBlock.Effect>
+            </TextBlock>
+
+            <TextBlock x:Name="TxtPrayerTime" Text="11:30 AM" Foreground="#F0F0F0" FontSize="36" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,15,0,0">
+                <TextBlock.Effect>
+                    <DropShadowEffect BlurRadius="8" Color="Black" ShadowDepth="2"/>
+                </TextBlock.Effect>
+            </TextBlock>
+        </StackPanel>
+
+        <!-- مناطق التنقل (يسار / يمين) -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Rectangle Grid.Column="0" Fill="Transparent" Cursor="Hand" MouseDown="LeftZone_MouseDown"/>
+            <Rectangle Grid.Column="1" Fill="Transparent" Cursor="Hand" MouseDown="RightZone_MouseDown"/>
+        </Grid>
+
+        <!-- زر الإعدادات (بعد الـ Grid علشان يبقى فوقها) -->
+        <Button Width="40" Height="40" HorizontalAlignment="Left" VerticalAlignment="Top"
+                Margin="20" Click="BtnSettings_Click" Background="Transparent" BorderThickness="0" Cursor="Hand">
+            <TextBlock Text="⚙️" FontFamily="Segoe UI Emoji" FontSize="26" Foreground="White"/>
+        </Button>
+
+        <!-- حقوق الطبع + التواصل -->
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,10">
+            <TextBlock Text="Copyright Eslam amer © 2026-2027 All rights reserved."
+                       Foreground="#80FFFFFF" FontSize="11" HorizontalAlignment="Center"
+                       IsHitTestVisible="False"/>
+            <TextBlock HorizontalAlignment="Center" FontSize="11" Margin="0,3,0,0">
+                <Run Text="للتواصل والإبلاغ عن مشكلة: " Foreground="#80FFFFFF"/>
+                <Hyperlink NavigateUri="mailto:eslamae420@gmail.com?subject=المؤذن - تواصل"
+                           RequestNavigate="Email_RequestNavigate"
+                           Foreground="#B0FFFFFF">eslamae420@gmail.com</Hyperlink>
+            </TextBlock>
+        </StackPanel>
+    </Grid>
+</Window>
