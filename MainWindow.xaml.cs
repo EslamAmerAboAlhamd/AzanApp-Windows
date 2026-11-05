@@ -10,7 +10,6 @@ using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Batoulapps.Adhan;
 using Batoulapps.Adhan.Internal;
-using NAudio.Wave;
 using Microsoft.Toolkit.Uwp.Notifications;
 
 namespace AzanApp
@@ -25,8 +24,9 @@ namespace AzanApp
         private readonly HashSet<string> firedToday = new HashSet<string>();
         private DateTime currentDate = DateTime.Today;
 
-        private WaveOut? outputDevice;
-        private AudioFileReader? audioFile;
+        private DateTime tomorrowFajr;
+        private DateTime yesterdayIsha;
+        private bool showYesterdayIsha = false;
 
         private bool promptedThisSession = false;
         private bool awaitingPermission = false;
@@ -39,7 +39,6 @@ namespace AzanApp
             InitializeComponent();
             DarkTitleBar.Apply(this);
 
-            // التشغيل مع ويندوز: يفتح مصغّراً في الـ Tray
             bool startMinimized = Array.Exists(Environment.GetCommandLineArgs(), a => a == "--minimized");
             if (startMinimized)
             {
@@ -118,16 +117,15 @@ namespace AzanApp
 
         // ===================== المواقيت =====================
 
-        private void UpdatePrayerTimes()
+        private List<PrayerItem> BuildPrayers(DateTime day)
         {
             var loc = settings.GetCoordinates();
             var coordinates = new Coordinates(loc.Lat, loc.Lon);
 
             int hourOffset = settings.DstIndex switch { 1 => 1, 2 => -1, _ => 0 };
+            int[] adj = settings.Adjustments is { Length: 6 } ? settings.Adjustments : new int[6];
 
-            currentDate = DateTime.Today;
-            firedToday.Clear();
-            DateComponents date = DateComponents.From(DateTime.Now);
+            DateComponents date = DateComponents.From(day);
 
             CalculationParameters paramsMethod = settings.MethodIndex switch
             {
@@ -140,34 +138,58 @@ namespace AzanApp
 
             var pt = new PrayerTimes(coordinates, date, paramsMethod);
 
-            DateTime Fix(DateTime t) => t.ToLocalTime().AddHours(hourOffset);
+            DateTime Fix(DateTime t, int i) => t.ToLocalTime().AddHours(hourOffset).AddMinutes(adj[i]);
 
-            prayersList = new List<PrayerItem>
+            return new List<PrayerItem>
             {
-                new PrayerItem("الفجر",  Fix(pt.Fajr),    "fajr.jpg"),
-                new PrayerItem("الشروق", Fix(pt.Sunrise), "sunrise.jpg"),
-                new PrayerItem("الظهر",  Fix(pt.Dhuhr),   "dhuhr.jpg"),
-                new PrayerItem("العصر",  Fix(pt.Asr),     "asr.jpg"),
-                new PrayerItem("المغرب", Fix(pt.Maghrib), "maghrib.jpg"),
-                new PrayerItem("العشاء", Fix(pt.Isha),    "isha.jpg")
+                new PrayerItem("الفجر",  Fix(pt.Fajr, 0),    "fajr.jpg"),
+                new PrayerItem("الشروق", Fix(pt.Sunrise, 1), "sunrise.jpg"),
+                new PrayerItem("الظهر",  Fix(pt.Dhuhr, 2),   "dhuhr.jpg"),
+                new PrayerItem("العصر",  Fix(pt.Asr, 3),     "asr.jpg"),
+                new PrayerItem("المغرب", Fix(pt.Maghrib, 4), "maghrib.jpg"),
+                new PrayerItem("العشاء", Fix(pt.Isha, 5),    "isha.jpg")
             };
-
-            SelectNextUpcomingPrayer();
-            DisplayCurrentPrayer();
         }
 
-        private void SelectNextUpcomingPrayer()
+        private void UpdatePrayerTimes()
         {
             DateTime now = DateTime.Now;
+
+            currentDate = DateTime.Today;
+            firedToday.Clear();
+
+            prayersList = BuildPrayers(now);
+            tomorrowFajr = BuildPrayers(now.AddDays(1))[0].Time;
+            yesterdayIsha = BuildPrayers(now.AddDays(-1))[5].Time;
+
+            TxtHijriDate.Text = HijriCalendarWindow.TodayText();
+
+            SelectCurrentPrayer();
+            DisplayCurrentPrayer();
+            UpdateCountdown();
+        }
+
+        private void SelectCurrentPrayer()
+        {
+            DateTime now = DateTime.Now;
+            int last = -1;
+
             for (int i = 0; i < prayersList.Count; i++)
             {
-                if (prayersList[i].Time > now)
-                {
-                    currentPrayerIndex = i;
-                    return;
-                }
+                if (i == 1) continue; // الشروق مش صلاة
+                if (prayersList[i].Time <= now) last = i;
             }
-            currentPrayerIndex = 0;
+
+            if (last == -1)
+            {
+                currentPrayerIndex = 5;
+                showYesterdayIsha = true;
+            }
+            else
+            {
+                currentPrayerIndex = last;
+                showYesterdayIsha = false;
+            }
         }
 
         private void DisplayCurrentPrayer()
@@ -175,8 +197,15 @@ namespace AzanApp
             if (prayersList.Count == 0) return;
 
             var item = prayersList[currentPrayerIndex];
+            DateTime shownTime = (showYesterdayIsha && currentPrayerIndex == 5) ? yesterdayIsha : item.Time;
+
             TxtPrayerName.Text = item.Name;
-            TxtPrayerTime.Text = item.Time.ToString("hh:mm tt");
+            TxtPrayerTime.Text = shownTime.ToString("hh:mm tt");
+
+            if (item.Name == "الشروق")
+                TxtHeader.Text = "الشروق";
+            else
+                TxtHeader.Text = shownTime <= DateTime.Now ? "آخر صلاة" : "الصلاة القادمة";
 
             try
             {
@@ -194,10 +223,37 @@ namespace AzanApp
             catch { }
         }
 
+        private void UpdateCountdown()
+        {
+            if (prayersList.Count == 0) return;
+
+            DateTime now = DateTime.Now;
+            string nextName = "الفجر";
+            DateTime nextTime = tomorrowFajr;
+
+            for (int i = 0; i < prayersList.Count; i++)
+            {
+                if (i == 1) continue;
+                if (prayersList[i].Time > now)
+                {
+                    nextName = prayersList[i].Name;
+                    nextTime = prayersList[i].Time;
+                    break;
+                }
+            }
+
+            TimeSpan remaining = nextTime - now;
+            if (remaining < TimeSpan.Zero) remaining = TimeSpan.Zero;
+
+            TxtRemainingLabel.Text = $"الوقت المتبقي لصلاة {nextName}";
+            TxtRemaining.Text = $"{(int)remaining.TotalHours:00}:{remaining.Minutes:00}:{remaining.Seconds:00}";
+        }
+
         // ===================== التنقل بين الصلوات =====================
 
         private void LeftZone_MouseDown(object sender, MouseButtonEventArgs e)
         {
+            showYesterdayIsha = false;
             currentPrayerIndex--;
             if (currentPrayerIndex < 0) currentPrayerIndex = prayersList.Count - 1;
             DisplayCurrentPrayer();
@@ -205,6 +261,7 @@ namespace AzanApp
 
         private void RightZone_MouseDown(object sender, MouseButtonEventArgs e)
         {
+            showYesterdayIsha = false;
             currentPrayerIndex++;
             if (currentPrayerIndex >= prayersList.Count) currentPrayerIndex = 0;
             DisplayCurrentPrayer();
@@ -238,6 +295,8 @@ namespace AzanApp
                     return;
                 }
 
+                UpdateCountdown();
+
                 foreach (var p in prayersList)
                 {
                     if (p.Name == "الشروق") continue;
@@ -246,71 +305,48 @@ namespace AzanApp
                     if (diff >= 0 && diff < 60 && firedToday.Add(p.Name))
                     {
                         SendWindowsNotification(p.Name);
-                        PlayAzanSound();
-                        SelectNextUpcomingPrayer();
+                        AzanPlayer.Play(Muadhins.FindFile(settings.MuadhinIndex));
+                        SelectCurrentPrayer();
                         DisplayCurrentPrayer();
+                        UpdateCountdown();
                     }
                 }
             };
             timer.Start();
         }
 
-        private void PlayAzanSound()
-        {
-            try
-            {
-                string path = Path.Combine(AppContext.BaseDirectory, "azan.mp3");
-                if (!File.Exists(path)) return;
-
-                DisposeAudio();
-                audioFile = new AudioFileReader(path);
-                outputDevice = new WaveOut();
-                outputDevice.PlaybackStopped += (s, e) => DisposeAudio();
-                outputDevice.Init(audioFile);
-                outputDevice.Play();
-            }
-            catch { }
-        }
-
-        private void DisposeAudio()
-        {
-            outputDevice?.Dispose();
-            outputDevice = null;
-            audioFile?.Dispose();
-            audioFile = null;
-        }
-
         // ===================== أيقونة الـ Tray =====================
 
         private void SetupTrayIcon()
-        {
-            trayIcon = new System.Windows.Forms.NotifyIcon
-            {
-                Text = "المؤذن",
-                Visible = true
-            };
+{
+    trayIcon = new System.Windows.Forms.NotifyIcon
+    {
+        Text = "المؤذن",
+        Visible = true
+    };
 
-            try
-            {
-                string iconPath = Path.Combine(AppContext.BaseDirectory, "app.ico");
-                if (File.Exists(iconPath))
-                    trayIcon.Icon = new System.Drawing.Icon(iconPath);
-                else
-                    trayIcon.Icon = System.Drawing.SystemIcons.Application;
-            }
-            catch { trayIcon.Icon = System.Drawing.SystemIcons.Application; }
+    try
+    {
+        var info = Application.GetResourceStream(new Uri("pack://application:,,,/app.ico"));
+        if (info != null)
+            trayIcon.Icon = new System.Drawing.Icon(info.Stream);
+        else
+            trayIcon.Icon = System.Drawing.SystemIcons.Application;
+    }
+    catch { trayIcon.Icon = System.Drawing.SystemIcons.Application; }
 
-            trayIcon.DoubleClick += (s, e) => RestoreFromTray();
+    trayIcon.DoubleClick += (s, e) => RestoreFromTray();
 
-            var menu = new System.Windows.Forms.ContextMenuStrip();
-            menu.Items.Add("فتح المؤذن", null, (s, e) => RestoreFromTray());
-            menu.Items.Add("خروج", null, (s, e) =>
-            {
-                reallyExit = true;
-                Close();
-            });
-            trayIcon.ContextMenuStrip = menu;
-        }
+    var menu = new System.Windows.Forms.ContextMenuStrip();
+    menu.Items.Add("فتح المؤذن", null, (s, e) => RestoreFromTray());
+    menu.Items.Add("إيقاف الأذان", null, (s, e) => AzanPlayer.Stop());
+    menu.Items.Add("خروج", null, (s, e) =>
+    {
+        reallyExit = true;
+        Close();
+    });
+    trayIcon.ContextMenuStrip = menu;
+}
 
         private void MainWindow_StateChanged(object? sender, EventArgs e)
         {
@@ -335,12 +371,16 @@ namespace AzanApp
             Show();
             WindowState = WindowState.Normal;
             Activate();
+
+            SelectCurrentPrayer();
+            DisplayCurrentPrayer();
+            UpdateCountdown();
         }
 
         protected override void OnClosed(EventArgs e)
         {
             timer?.Stop();
-            DisposeAudio();
+            AzanPlayer.Stop();
             if (trayIcon != null)
             {
                 trayIcon.Visible = false;
@@ -366,7 +406,13 @@ namespace AzanApp
             e.Handled = true;
         }
 
-        // ===================== الإعدادات =====================
+        // ===================== التقويم والإعدادات =====================
+
+        private void BtnCalendar_Click(object sender, RoutedEventArgs e)
+        {
+            var win = new HijriCalendarWindow { Owner = this };
+            win.ShowDialog();
+        }
 
         private void BtnSettings_Click(object sender, RoutedEventArgs e)
         {

@@ -480,3 +480,8 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+installer/
+Sounds/*.mp3
+Sounds/*.wav
+Sounds/*.m4a

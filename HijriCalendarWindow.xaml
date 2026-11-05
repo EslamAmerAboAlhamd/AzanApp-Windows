@@ -1,0 +1,60 @@
+<Window x:Class="AzanApp.HijriCalendarWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="التقويم الهجري" Height="560" Width="480"
+        Icon="app.ico"
+        FontFamily="pack://application:,,,/Fonts/#Cairo"
+        WindowStartupLocation="CenterOwner" Background="#181825"
+        ResizeMode="NoResize" FlowDirection="RightToLeft">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- التنقل بين الشهور -->
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="0" Content="الشهر السابق" Padding="12,6" Click="BtnPrev_Click"
+                    Background="#313244" Foreground="White" BorderThickness="0"/>
+
+            <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                <TextBlock x:Name="TxtMonthTitle" Foreground="#CDD6F4" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
+                <TextBlock x:Name="TxtGregorianRange" Foreground="#A6ADC8" FontSize="12" HorizontalAlignment="Center"/>
+            </StackPanel>
+
+            <Button Grid.Column="2" Content="الشهر التالي" Padding="12,6" Click="BtnNext_Click"
+                    Background="#313244" Foreground="White" BorderThickness="0"/>
+        </Grid>
+
+        <!-- أسماء الأيام -->
+        <UniformGrid Grid.Row="2" Columns="7" Margin="0,15,0,5">
+            <TextBlock Text="السبت" Foreground="#89B4FA" FontSize="13" HorizontalAlignment="Center"/>
+            <TextBlock Text="الأحد" Foreground="#89B4FA" FontSize="13" HorizontalAlignment="Center"/>
+            <TextBlock Text="الاثنين" Foreground="#89B4FA" FontSize="13" HorizontalAlignment="Center"/>
+            <TextBlock Text="الثلاثاء" Foreground="#89B4FA" FontSize="13" HorizontalAlignment="Center"/>
+            <TextBlock Text="الأربعاء" Foreground="#89B4FA" FontSize="13" HorizontalAlignment="Center"/>
+            <TextBlock Text="الخميس" Foreground="#89B4FA" FontSize="13" HorizontalAlignment="Center"/>
+            <TextBlock Text="الجمعة" Foreground="#F9E2AF" FontSize="13" HorizontalAlignment="Center"/>
+        </UniformGrid>
+
+        <!-- أيام الشهر -->
+        <UniformGrid x:Name="DaysGrid" Grid.Row="3" Columns="7" Rows="6"/>
+
+        <!-- الأزرار -->
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,15,0,0">
+            <Button Content="اليوم" Width="110" Height="36" Click="BtnToday_Click"
+                    Background="#89B4FA" Foreground="#11111B" FontWeight="Bold" Margin="5,0" BorderThickness="0"/>
+            <Button Content="إغلاق" Width="100" Height="36" Click="BtnClose_Click"
+                    Background="#45475A" Foreground="White" Margin="5,0" BorderThickness="0"/>
+        </StackPanel>
+    </Grid>
+</Window>

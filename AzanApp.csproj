@@ -18,8 +18,8 @@
 
   <ItemGroup>
     <Content Include="Images\**" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="azan.mp3" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="app.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Sounds\**" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="azan.mp3" CopyToOutputDirectory="PreserveNewest" Condition="Exists('azan.mp3')" />
     <Resource Include="app.ico" />
     <Resource Include="Fonts\*.ttf" />
   </ItemGroup>
